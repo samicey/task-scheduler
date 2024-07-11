@@ -1,0 +1,9 @@
+# directories
+node_modules
+.build/
+.webpack/
+buckets/
+
+# files
+.env
+

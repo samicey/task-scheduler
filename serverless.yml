@@ -1,0 +1,174 @@
+service: task-scheduler
+
+useDotenv: true
+package:
+  individually: false
+plugins:
+  - serverless-webpack
+  - serverless-offline
+  - serverless-s3-local
+  - serverless-lift
+  - serverless-prune-plugin
+  - serverless-associate-waf
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  apiGateway:
+    metrics: true
+  stage: ${opt:stage, 'dev'}
+  region: ${env:SERVERLESS_PROVIDER_REGION}
+  iam:
+    role:
+      statements:
+        - Effect: 'Allow'
+          Action:
+            - 'lambda:InvokeFunction'
+            - 'lambda:Invoke'
+          Resource: '*'
+        - Effect: 'Allow'
+          Action:
+            - 's3:*'
+          Resource: '*'
+  tracing:
+    apiGateway: true
+    lambda: true
+  logs:
+    restApi: true
+
+  environment:
+    NODE_ENV: ${env:NODE_ENV}
+    TASK_SCHEDULER_WAF_NAME: ${env:TASK_SCHEDULER_WAF_NAME}
+    AWS_ACCESS_KEY_ID: ${env:AWS_ACCESS_KEY_ID}
+    AWS_BUCKET_NAME: ${env:AWS_BUCKET_NAME}
+    AWS_SECRET_ACCESS_KEY: ${env:AWS_SECRET_ACCESS_KEY}
+    DB_NAME: ${env:DB_NAME}
+    DB_PASSWORD: ${env:DB_PASSWORD}
+    DB_USER: ${env:DB_USER}
+
+functions:
+  app:
+    handler: src/index.handler
+    timeout: 30
+    events:
+      - http:
+          method: ANY
+          path: /{proxy+}
+          cors: true
+
+custom:
+  associateWaf:
+    name: ${env:TASK_SCHEDULER_WAF_NAME}
+    version: V2
+  prune:
+    automatic: true
+    number: 4
+  webpack:
+    includeModules:
+      forceExclude:
+        - aws-sdk
+    webpackConfig: 'webpack.config.js'
+    packager: 'yarn'
+    concurrency: 1
+
+  serverless-offline-sqs:
+    region: { 'Fn::Sub': '${AWS::Region}' }
+    accessKeyId: ${env:AWS_ACCESS_KEY_ID}
+    secretAccessKey: ${env:AWS_SECRET_ACCESS_KEY}
+  serverless-offline:
+    port: 5000
+    localEnvironment: true
+    s3:
+      bucketName: ${env:AWS_BUCKET_NAME}
+      host: localhost
+  deployUploadsBucket:
+    dev: false
+    staging: false
+    production: false
+    other: true
+
+resources:
+  Resources:
+    ScheduleDBCluster:
+      Type: AWS::RDS::DBCluster
+      Properties:
+        Engine: aurora-postgresql
+        DatabaseName: ${env:DB_NAME}
+        EngineVersion: "13.6"
+        EngineMode: "serverless"
+        DBClusterIdentifier: dbClusterIdentifier-${self:provider.stage}
+        MasterUsername: ${env:DB_USER}
+        MasterUserPassword: ${env:DB_PASSWORD}
+    ScheduleDBInstance:
+      Type: AWS::RDS::DBInstance
+      Properties:
+        DBClusterIdentifier: !Ref ScheduleDBCluster
+        DBInstanceClass: db.t3.medium
+        Engine: aurora-postgresql
+        DBInstanceIdentifier: dbInstanceIdentifier-${self:provider.stage}
+    UploadsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${env:AWS_BUCKET_NAME}
+  
+    WafWebAcl:
+      Type: AWS::WAFv2::WebACL
+      Properties:
+        Name: WAF_SCHEDULER
+        Scope: 'REGIONAL'
+        DefaultAction:
+          Allow: {}
+        VisibilityConfig:
+          CloudWatchMetricsEnabled: true
+          MetricName: 'WAF_SCHEDULER'
+          SampledRequestsEnabled: true
+        Rules:
+          - Name: 'AWSManagedRulesCommonRule'
+            Statement:
+              ManagedRuleGroupStatement:
+                VendorName: 'AWS'
+                Name: 'AWSManagedRulesCommonRuleSet'
+                ExcludedRules:
+                  - 'SizeRestrictions_BODY'
+                  - 'CrossSiteScripting_BODY'
+            Priority: 0
+            OverrideAction:
+              None: {}
+            VisibilityConfig:
+              CloudWatchMetricsEnabled: true
+              MetricName: 'AWSManagedRulesCommonRule'
+              SampledRequestsEnabled: true
+          - Name: 'AWSManagedRulesKnownBadInputsRule'
+            Statement:
+              ManagedRuleGroupStatement:
+                VendorName: 'AWS'
+                Name: 'AWSManagedRulesKnownBadInputsRuleSet'
+            Priority: 1
+            OverrideAction:
+              None: {}
+            VisibilityConfig:
+              CloudWatchMetricsEnabled: true
+              MetricName: 'AWSManagedRulesKnownBadInputsRule'
+              SampledRequestsEnabled: true
+
+  Outputs:
+    ApiGatewayRestApiId:
+      Value:
+        Ref: ApiGatewayRestApi
+      Export:
+        Name: ${opt:stage}-ExtApiGatewayRestApiId
+
+    ApiGatewayRestApiRootResourceId:
+      Value:
+        Fn::GetAtt:
+          - ApiGatewayRestApi
+          - RootResourceId
+      Export:
+        Name: ${opt:stage}-ExtApiGatewayRestApiRootResourceId
+
+    WafWebAcl:
+      Value:
+        Ref: WafWebAcl
+      Export:
+        Name: ${opt:stage}-ExtWafWebAcl
+
