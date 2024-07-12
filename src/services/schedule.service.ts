@@ -194,6 +194,11 @@ const checkOverlappingSchedule = async (
                     endHour: { [Op.lte]: endHour }
                 },
                 {
+                    
+                    startHour: { [Op.eq]: endHour },
+                    startMinutes: { [Op.lt]: endMinutes }
+                },
+                {
                     startHour: { [Op.gte]: startHour },
                     endHour: { [Op.lte]: endHour },
                     startMinutes: { [Op.gte]: startMinutes },
