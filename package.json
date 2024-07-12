@@ -1,6 +1,7 @@
 {
   "author": "samuel",
   "dependencies": {
+    "@aws-sdk/client-sqs": "^3.614.0",
     "aws-sdk": "2.1225.0",
     "cors": "2.8.5",
     "dotenv": "16.0.3",

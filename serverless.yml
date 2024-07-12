@@ -7,6 +7,7 @@ plugins:
   - serverless-webpack
   - serverless-offline
   - serverless-s3-local
+  - serverless-lift
   - serverless-prune-plugin
   - serverless-associate-waf
 
@@ -24,11 +25,30 @@ provider:
           Action:
             - 'lambda:InvokeFunction'
             - 'lambda:Invoke'
-          Resource: '*'
+          Resource:
+            - 'arn:aws:lambda:${self:provider.region}:${AWS::AccountId}:function:${self:service}-${self:provider.stage}-app'
         - Effect: 'Allow'
           Action:
-            - 's3:*'
-          Resource: '*'
+            - 's3:PutObject'
+            - 's3:GetObject'
+            - 's3:ListBucket'
+          Resource: 
+            - 'arn:aws:s3:::${env:AWS_BUCKET_NAME}'
+            - 'arn:aws:s3:::${env:AWS_BUCKET_NAME}/*'
+        - Effect: 'Allow'
+          Action:
+            - 'sqs:SendMessage'
+            - 'sqs:GetQueueUrl'
+          Resource:
+            [
+              {
+                'Fn::Sub': 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${self:provider.environment.SCHEDULE_QUEUE_NAME}'
+              },
+            ]
+        - Effect: 'Allow'
+          Action:
+            - 'sqs:ListQueues'
+          Resource: { 'Fn::Sub': 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:*' }
   tracing:
     apiGateway: true
     lambda: true
@@ -41,9 +61,16 @@ provider:
     AWS_ACCESS_KEY_ID: ${env:AWS_ACCESS_KEY_ID}
     AWS_BUCKET_NAME: ${env:AWS_BUCKET_NAME}
     AWS_SECRET_ACCESS_KEY: ${env:AWS_SECRET_ACCESS_KEY}
+    SCHEDULE_QUEUE_NAME: task-scheduler-${opt:stage}-scheduleQueue
     DB_NAME: ${env:DB_NAME}
     DB_PASSWORD: ${env:DB_PASSWORD}
     DB_USER: ${env:DB_USER}
+
+constructs:
+  scheduleQueue:
+    type: queue
+    worker:
+      handler: src/jobs.scheduleHandler
 
 functions:
   app:

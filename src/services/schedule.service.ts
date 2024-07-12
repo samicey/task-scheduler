@@ -2,6 +2,7 @@ import { Op } from "sequelize";
 import { ScheduleDto } from "../dtos/schedule.dto";
 import { Schedule } from '../models';
 import { ScheduleTime } from "../dtos/schedule-time.dto";
+import { sendSQSMessage } from "../jobs/producers/schedule.producer.job";
 
 export const createSchedule = async (scheduleDto: ScheduleDto): Promise<{ data: ScheduleDto | null, message: string, success: boolean } | undefined> => {
     try {
@@ -39,7 +40,11 @@ export const createSchedule = async (scheduleDto: ScheduleDto): Promise<{ data: 
             startHour,
             startMinutes,
         });
-        return { data: ScheduleDto.toDto(schedule), message: 'schedule retrieved', success: true };    
+
+        const dto = ScheduleDto.toDto(schedule);
+        await sendSQSMessage({ key: dto.id, scheduleBody: JSON.stringify(dto) });
+
+        return { data: dto, message: 'schedule retrieved', success: true };    
     } catch (error: any) {
         return { data: null, message: error.message, success: false };
     };
@@ -114,7 +119,7 @@ export const updateSchedule = async (scheduleDto: ScheduleDto): Promise<{ data: 
             where: { userId, id },
         }
         );
-        return { data: ScheduleDto.toDto(schedule), message: 'schedule retrieved', success: true };    
+        return await findSchedule(userId, id); 
     } catch (error: any) {
         return { data: null, message: error.message, success: false };
     };
@@ -179,9 +184,12 @@ const resolveAMPMTime = (time: string): { hours: number, minutes: number } => {
     const sanitizedTime = time.replace(regexAMPM, '').trim();
 
     let [hours, minutes] = sanitizedTime.split(':');
+    
+    let hoursInteger = Number(hours);
+    let minutesInteger = Number(minutes);
 
     if(match !== null && (match[0] === 'pm' || match[0] === 'PM') && Number(hours) !== 12) {
-        hours += 12;
+        hoursInteger += 12;
     }
-    return { hours: Number(hours), minutes: Number(minutes) }
+    return { hours: Number(hoursInteger), minutes: Number(minutesInteger) }
 }
