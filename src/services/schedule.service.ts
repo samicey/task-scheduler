@@ -42,7 +42,7 @@ export const createSchedule = async (scheduleDto: ScheduleDto): Promise<{ data: 
         });
 
         const dto = ScheduleDto.toDto(schedule);
-        await sendSQSMessage({ key: dto.id, scheduleBody: JSON.stringify(dto) });
+        // await sendSQSMessage({ key: dto.id, scheduleBody: JSON.stringify(dto) });
 
         return { data: dto, message: 'schedule retrieved', success: true };    
     } catch (error: any) {
@@ -55,6 +55,9 @@ export const findSchedule = async (userId: string, scheduleId: string): Promise<
         const schedule = await Schedule.findOne({ 
             where: { userId, id: scheduleId }
         });
+        if(!schedule) {
+            return { data: null, message: 'schedule does not exist', success: false };
+        }
         return { data: ScheduleDto.toDto(schedule), message: 'schedule retrieved', success: true };    
     } catch (error: any) {
         return { data: null, message: error.message, success: false };
@@ -82,6 +85,11 @@ export const deleteSchedule = async (userId: string, scheduleId: string) => {
 export const updateSchedule = async (scheduleDto: ScheduleDto): Promise<{ data: ScheduleDto | null, message: string, success: boolean } | undefined> => {
     try {
         const { day, endTime, startTime, userId, id } = scheduleDto;
+        const result = await findSchedule(userId, id);
+        if(!result?.data) {
+            return { data: null, message: 'schedule does not exist', success: false };
+        }
+
         const { hours: startHour, minutes: startMinutes } = resolveAMPMTime(startTime);
         const { hours: endHour, minutes: endMinutes } = resolveAMPMTime(endTime);
         
@@ -131,8 +139,28 @@ export const checkIfOnline = async (userId: string, timestamp: string) => {
         const dayOfWeek = date.getUTCDay();
         const hour = date.getUTCHours();
         const minute = date.getUTCMinutes();
-        const schedule = await Schedule.findOne({ where: { userId, dayOfWeek, startHour: { [Op.lte]: hour }, endHour: { [Op.gte]: hour }, startMinutes: { [Op.lte]: minute }, endMinutes: { [Op.gte]: minute } } });
-        return { online: !!schedule, success: true };     
+        const schedule = await Schedule.findOne({
+            where: {
+              userId,
+              day: weekDay[`${dayOfWeek}`],
+              [Op.and]: [
+                {
+                  [Op.or]: [
+                    { startHour: { [Op.lt]: hour } },
+                    { startHour: hour, startMinutes: { [Op.lte]: minute } }
+                  ]
+                },
+                {
+                  [Op.or]: [
+                    { endHour: { [Op.gt]: hour } },
+                    { endHour: hour, endMinutes: { [Op.gte]: minute } }
+                  ]
+                }
+              ]
+            }
+          });
+
+        return { online: !!schedule };     
     } catch (error: any) {
         return { data: null, message: error.message, success: false };
     }
@@ -192,4 +220,14 @@ const resolveAMPMTime = (time: string): { hours: number, minutes: number } => {
         hoursInteger += 12;
     }
     return { hours: Number(hoursInteger), minutes: Number(minutesInteger) }
-}
+};
+
+const weekDay = {
+    '1': 'Monday',
+    '2': 'Tuesday',
+    '3': 'Wednesday',
+    '4': 'Thursday',
+    '5': 'Friday',
+    '6': 'Saturday',
+    '7': 'Sunday'
+} as { [key: string]: string };

@@ -16,9 +16,9 @@ export const scheduleRoutes = (app: express.Application ): void => {
         const schedule = await updateSchedule(request.body);
         response.status(200).json(schedule)
     });
-    app.get('/schedule/check-status/:scheduleId/:timestamp', validateScheduleStatusRequestParameter, async (request: express.Request, response: express.Response) => {
-        const { scheduleId, timestamp } = request.params;
-        const schedule = await checkIfOnline(scheduleId, timestamp);
+    app.get('/schedule/check-status/:userId/:timestamp', validateScheduleStatusRequestParameter, async (request: express.Request, response: express.Response) => {
+        const { userId, timestamp } = request.params;
+        const schedule = await checkIfOnline(userId, timestamp);
         response.status(200).json(schedule)
     });
     app.delete('/schedule/user/:userId/:scheduleId', validateScheduleRequestParameter, async (request: express.Request, response: express.Response) => {

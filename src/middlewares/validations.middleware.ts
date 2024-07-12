@@ -37,7 +37,7 @@ export const validateScheduleRequestParameter = (request: Request, _response: Re
   export const validateScheduleStatusRequestParameter = (request: Request, _response: Response, next: NextFunction): void => {
     const scheduleRequestParameter = Joi.object({
       timestamp: Joi.string().required(),
-      scheduleId: Joi.string().required()
+      userId: Joi.string().required()
     });
   
     const { error } = scheduleRequestParameter.validate(request.params);
