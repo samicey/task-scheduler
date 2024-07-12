@@ -4,6 +4,7 @@ import sequelize from '../sequelize.config';
 export const Schedule = sequelize.define('Schedule', {
   id: {
     type: DataTypes.UUIDV4,
+    defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
     allowNull: false,
   },  
