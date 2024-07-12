@@ -24,7 +24,7 @@ This project is a serverless application built using AWS services that processes
 1. **Clone the Repository**
 
 ```sh
-   git clone <> 
+   git clone https://github.com/samicey/task-scheduler.git
    cd task-scheduler
 ```
 
