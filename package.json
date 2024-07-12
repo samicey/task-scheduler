@@ -49,7 +49,10 @@
   "private": true,
   "scripts": {
     "build": "tsc --watch false",
-    "start": "npx serverless offline --stage local --noPrependStageInUrl"
+    "db:docker": "echo 'Starting DB' && docker rm -fv schedule_db && docker run --rm --name schedule_db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=scheduleDB -e POSTGRES_USER=postgres -p 5432:5432 -d postgres:12.12-alpine",
+    "start": "npx serverless offline --stage local --noPrependStageInUrl",
+    "migrate-db-local": "NODE_ENV=local npx sequelize-cli db:migrate",
+    "generate-db-local": "npx sequelize-cli migration:generate --env=local --migrations-path=src/config/migrations --models-path=src/models/schedule.model.js"
   },
   "version": "2.4.1"
 }

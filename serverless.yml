@@ -53,7 +53,7 @@ functions:
     events:
       - http:
           method: ANY
-          path: /{proxy+}
+          path: /schedule/{proxy+}
           cors: true
 
 custom:
