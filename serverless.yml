@@ -7,7 +7,6 @@ plugins:
   - serverless-webpack
   - serverless-offline
   - serverless-s3-local
-  - serverless-lift
   - serverless-prune-plugin
   - serverless-associate-waf
 

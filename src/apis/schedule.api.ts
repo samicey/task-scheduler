@@ -1,5 +1,5 @@
 import express from 'express';
-import { createSchedule, findSchedule, updateSchedule, checkIfOnline } from '../services';
+import { createSchedule, findSchedule, updateSchedule, checkIfOnline, deleteSchedule} from '../services';
 import { validateScheduleRequestParameter, validateScheduleRequestSchema, validateScheduleStatusRequestParameter } from '../middlewares/validations.middleware';
 
 export const scheduleRoutes = (app: express.Application ): void => {
@@ -19,6 +19,11 @@ export const scheduleRoutes = (app: express.Application ): void => {
     app.get('/schedule/check-status/:scheduleId/:timestamp', validateScheduleStatusRequestParameter, async (request: express.Request, response: express.Response) => {
         const { scheduleId, timestamp } = request.params;
         const schedule = await checkIfOnline(scheduleId, timestamp);
+        response.status(200).json(schedule)
+    });
+    app.delete('/schedule/user/:userId/:scheduleId', validateScheduleRequestParameter, async (request: express.Request, response: express.Response) => {
+        const { userId, scheduleId } = request.params;
+        const schedule = await deleteSchedule(userId, scheduleId);
         response.status(200).json(schedule)
     });
     

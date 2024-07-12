@@ -56,6 +56,24 @@ export const findSchedule = async (userId: string, scheduleId: string): Promise<
     };
 }
 
+export const deleteSchedule = async (userId: string, scheduleId: string) => {
+    try {
+        const schedule = await Schedule.findOne({ 
+            where: { userId, id: scheduleId }
+        });
+        if(!schedule) {
+            return { data: null, message: 'schedule does not exist', success: false };
+        }
+        const result = await Schedule.destroy({ 
+            where: { userId, id: scheduleId }
+        });
+        result
+        return { deleted: result > 0, success: true };    
+    } catch (error: any) {
+        return { data: null, message: error.message, success: false };
+    };
+}
+
 export const updateSchedule = async (scheduleDto: ScheduleDto): Promise<{ data: ScheduleDto | null, message: string, success: boolean } | undefined> => {
     try {
         const { day, endTime, startTime, userId, id } = scheduleDto;
