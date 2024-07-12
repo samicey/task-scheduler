@@ -42,7 +42,7 @@ export const createSchedule = async (scheduleDto: ScheduleDto): Promise<{ data: 
         });
 
         const dto = ScheduleDto.toDto(schedule);
-        // await sendSQSMessage({ key: dto.id, scheduleBody: JSON.stringify(dto) });
+        await sendSQSMessage({ key: dto.id, scheduleBody: JSON.stringify(dto) });
 
         return { data: dto, message: 'schedule retrieved', success: true };    
     } catch (error: any) {
