@@ -33,3 +33,18 @@ export const validateScheduleRequestParameter = (request: Request, _response: Re
         _response.status(400).json({ message: error.message, success: false });
     }
   };
+
+  export const validateScheduleStatusRequestParameter = (request: Request, _response: Response, next: NextFunction): void => {
+    const scheduleRequestParameter = Joi.object({
+      timestamp: Joi.string().required(),
+      scheduleId: Joi.string().required()
+    });
+  
+    const { error } = scheduleRequestParameter.validate(request.params);
+  
+    if (!error) {
+      next();
+    } else {
+        _response.status(400).json({ message: error.message, success: false });
+    }
+  };
